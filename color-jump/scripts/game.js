@@ -41,6 +41,7 @@ class GameScene extends Phaser.Scene {
   preload() {
     this.load.image("wall", "/color-jump/assets/wall.png");
     this.load.image("ball", "/color-jump/assets/ball.png");
+    this.load.image("coin", "/color-jump/assets/coin.png");
   }
 
   create() {
@@ -60,6 +61,15 @@ class GameScene extends Phaser.Scene {
     this.ball.setTint(randomWall.body.color);
     this.ball.setVelocity(gameOptions.ballSpeed, 0);
 
+    this.coin = this.matter.add.image(0, 0, "coin");
+    this.coin.setCircle();
+    // set as static (not affected by gravity or collisions)
+    this.coin.setStatic(true);
+    // Will fire collision events without actually collide
+    this.coin.isSensor = true;
+    this.coin.body.label = "coin"
+    this.placeCoin();
+
     this.input.on("pointerdown", this.jump, this);
 
     this.matter.world.on("collisionstart", function (e, b1, b2) {
@@ -69,7 +79,15 @@ class GameScene extends Phaser.Scene {
       if (b1.label == "rightwall" || b2.label == "rightwall") {
         this.handleWallCollision(RIGHT, b1, b2);
       }
+      if (b1.label == "coin" || b2.label == "coin") {
+        this.placeCoin();
+      }
     }, this);
+  }
+
+  placeCoin() {
+    this.coin.x = Phaser.Math.Between(game.config.width * 0.2, game.config.width * 0.8);
+    this.coin.y = Phaser.Math.Between(game.config.height * 0.2, game.config.height * 0.8);
   }
 
   handleWallCollision(side, bodyA, bodyB) {
