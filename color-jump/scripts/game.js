@@ -137,8 +137,8 @@ function resize() {
 
     // Check if device DPI messes up the width-height-ratio
     let canvas = document.getElementsByTagName('canvas')[0];
-    let dpi_w = parseInt(div.style.width) / canvas.width;
-    let dpi_h = parseInt(div.style.height) / canvas.height;
+    let dpi_w = Math.ceil(div.style.width) / canvas.width;
+    let dpi_h = Math.ceil(div.style.height) / canvas.height;
 
     let height = window.innerHeight * (dpi_w / dpi_h);
     let width = height * game_ratio;
