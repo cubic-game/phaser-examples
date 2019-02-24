@@ -1,8 +1,5 @@
 let gameOptions = {
-  ballSpeed: 4,
-  jumpForce: 30,
-  bars: 4,
-  barColors: [0x1abc9c, 0x2980b9, 0x9b59b6, 0xf1c40f, 0xc0392b, 0xecf0f1]
+
 }
 
 const LEFT = 0;
@@ -39,50 +36,56 @@ class GameScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image("wall", "/color-jump/assets/wall.png");
-    this.load.image("ball", "/color-jump/assets/ball.png");
-    this.load.image("coin", "/color-jump/assets/coin.png");
+    this.load.image("wall", "/dont-touch-spikes/assets/wall.png");
+    this.load.image("ball", "/dont-touch-spikes/assets/ball.png");
+    this.load.image("leftspike", "/dont-touch-spikes/assets/leftspike.png");
+    this.load.image("rightspike", "/dont-touch-spikes/assets/rightspike.png");
   }
 
   create() {
-    this.leftWalls = [];
-    this.rightWalls = [];
-
-    for (let i = 0; i < gameOptions.bars; i++) {
-      this.leftWalls[i] = this.addWall(i, LEFT);
-      this.rightWalls[i] = this.addWall(i, RIGHT);
-    }
-
-    this.ball = this.matter.add.image(game.config.width / 4, game.config.height / 2, "ball");
-    this.ball.setBody({
-      type: "circle"
+    this.leftWall = this.matter.add.image(10, this.sys.game.config.height / 2, 'wall', null, {
+      isStatic: true,
+      label: 'leftwall'
     });
-    let randomWall = Phaser.Math.RND.pick(this.rightWalls);
-    this.ball.setTint(randomWall.body.color);
-    this.ball.setVelocity(gameOptions.ballSpeed, 0);
+    this.leftWall.displayHeight = this.sys.game.config.height;
+    this.leftWall.tint = 0x00ff00;
+    this.leftWall.setDepth(1);
 
-    this.coin = this.matter.add.image(0, 0, "coin");
-    this.coin.setCircle();
-    // set as static (not affected by gravity or collisions)
-    this.coin.setStatic(true);
-    // Will fire collision events without actually collide
-    this.coin.isSensor = true;
-    this.coin.body.label = "coin"
-    this.placeCoin();
+    this.rightWall = this.matter.add.image(this.sys.game.config.width - 10, this.sys.game.config.height / 2, 'wall', null, {
+      isStatic: true,
+      label: 'rightwall'
+    });
+    this.rightWall.tint = 0x00ff00;
+    this.rightWall.displayHeight = this.sys.game.config.height;
+    this.rightWall.setDepth(1);
 
-    this.input.on("pointerdown", this.jump, this);
+    const wallWidth = this.leftWall.getBounds().width;
+console.log('wallWidth', wallWidth);
+    // Define the rigidbody shape (verts, three points)
+    let leftSpikePath = this.matter.world.fromPath("-45 -35 45 0 -45 35");
+    let rightSpikePath = this.matter.world.fromPath("-45 0 45 35 45 -35");
 
-    this.matter.world.on("collisionstart", function (e, b1, b2) {
-      if (b1.label == "leftwall" || b2.label == "leftwall") {
-        this.handleWallCollision(LEFT, b1, b2);
-      }
-      if (b1.label == "rightwall" || b2.label == "rightwall") {
-        this.handleWallCollision(RIGHT, b1, b2);
-      }
-      if (b1.label == "coin" || b2.label == "coin") {
-        this.placeCoin();
-      }
-    }, this);
+    this.leftSpike = this.matter.add.image(wallWidth + 10, Phaser.Math.Between(50, this.sys.game.config.height - 50), 'leftspike', null, {
+      isStatic: true,
+      shape: {
+        type: "fromVerts",
+        verts: leftSpikePath
+      },
+      label: "spike"
+    });
+    this.rightSpike = this.matter.add.image(this.sys.game.config.width - wallWidth - 10, Phaser.Math.Between(50, this.sys.game.config.height - 50), 'rightspike', null, {
+      isStatic: true,
+      shape: {
+        type: "fromVerts",
+        verts: rightSpikePath
+      },
+      label: "spike"
+    });
+    this.ball = this.matter.add.image(game.config.width / 2, game.config.height / 2, "ball");
+        this.ball.setCircle();
+        this.ball.setVelocity(7, 0);
+        this.ball.setBounce(1);
+        this.ball.setFriction(0);
   }
 
   placeCoin() {
