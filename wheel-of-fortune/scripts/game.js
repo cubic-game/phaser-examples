@@ -162,14 +162,74 @@ class GameScene extends Phaser.Scene {
     // adding the pin in the middle of the canvas
     this.pin = this.add.sprite(game.config.width / 2, game.config.height / 2, "pin");
 
+    // the game has just started = we can spin the wheel
+    this.canSpin = true;
+
     // adding the text field
-    this.prizeText = this.add.text(game.config.width / 2, game.config.height - 20, "Spin the wheel", {
+    this.prizeText = this.add.text(game.config.width / 2, game.config.height - 100, "Spin the wheel", {
       font: "bold 32px Arial",
       align: "center",
       color: "white"
     });
+    this.input.on('pointerdown', this.spinWheel, this);
+  }
+
+  spinWheel(pointer) {
+    if (this.canSpin) {
+      this.prizeText.setText("");
+      // the wheel will spin round for some times. This is just coreography
+      let rounds = Phaser.Math.Between(gameOptions.wheelRounds.min, gameOptions.wheelRounds.max);
+      // then will rotate by a random number from 0 to 360 degrees. This is the actual spin
+      let degrees = Phaser.Math.Between(0, 360);
+
+      let backDegrees = Phaser.Math.Between(gameOptions.backSpin.min, gameOptions.backSpin.max);
+      // before the wheel ends spinning, we already know the prize
+      let prizeDegree = 0;
+      // looping through slices
+      for (let i = gameOptions.slices.length - 1; i >= 0; i--) {
+        // adding current slice angle to prizeDegree
+        prizeDegree += gameOptions.slices[i].degrees;
+        // if it's greater than the random angle...
+        if (prizeDegree > degrees - backDegrees) {
+          // we found the prize
+          var prize = i;
+          break;
+        }
+      }
+      // now the wheel cannot spin because it's already spinning
+      this.canSpin = false;
+      // animation tweeen for the spin: duration 3s, will rotate by (360 * rounds + degrees) degrees
+      // the quadratic easing will simulate friction
+      this.tweens.add({
+        targets: [this.wheelContainer],
+        angle: 360 * rounds + degrees,
+        // tween duration
+        duration: Phaser.Math.Between(gameOptions.rotationTimeRange.min, gameOptions.rotationTimeRange.max),
+        // tween easing
+        ease: "Cubic.easeOut",
+        // callback scope
+        callbackScope: this,
+        onComplete: (tween) => {
+          // another tween to rotate a bit in the opposite direction
+          this.tweens.add({
+            targets: [this.wheelContainer],
+            angle: this.wheelContainer.angle - backDegrees,
+            duration: Phaser.Math.Between(gameOptions.rotationTimeRange.min, gameOptions.rotationTimeRange.max) / 2,
+            ease: "Cubic.easeIn",
+            callbackScope: this,
+            onComplete: (tween) => {
+              // displaying prize text
+              this.prizeText.setText(gameOptions.slices[prize].text);
+              // player can spin again
+              this.canSpin = true;
+            }
+          })
+        }
+      });
+    }
   }
 }
+
 
 function resize() {
   let game_ratio = game.config.width / game.config.height;
