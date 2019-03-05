@@ -6,6 +6,11 @@ let gameOptions = {
   colors: [0xff0000, 0x00ff00, 0x0000ff, 0xffff00] // tile colors
 }
 
+const _HERO = 1;
+const _KEY = 2;
+const _LOCKEDDOOR = 3;
+const _UNLOCKEDDOOR = 4;
+
 window.onload = function () {
   let gameConfig = {
     type: Phaser.SHOW_ALL,
@@ -28,6 +33,10 @@ class GameScene extends Phaser.Scene {
 
   preload() {
     this.load.image('tile', '/knight/assets/tile.png');
+    this.load.spritesheet('tiles', '/knight/assets/tiles.png', {
+      frameWidth: gameOptions.tileSize,
+      frameHeight: gameOptions.tileSize
+    });
     this.load.image('rotate', '/knight/assets/rotate.png');
   }
 
@@ -248,6 +257,7 @@ class GameScene extends Phaser.Scene {
 
     // tiles are saved in an array called tilesArray
     this.tilesArray = [];
+    this.specialItemCandidates = [];
 
     // this group will contain all tiles
     this.tileGroup = this.add.container();
@@ -259,10 +269,32 @@ class GameScene extends Phaser.Scene {
       for (var j = 0; j < gameOptions.fieldSize; j++) {
         // this function adds a tile at row "i" and column "j"
         this.addTile(i, j);
+        this.specialItemCandidates.push(new Phaser.Geom.Point(i, j));
       }
     }
+    // choosing a random location for the hero
+    let heroLocation = Phaser.Utils.Array.RemoveRandomElement(this.specialItemCandidates);
+    // adjusting tile frame
+    this.tilesArray[heroLocation.y][heroLocation.x].tileSprite.setFrame(_HERO);
+    this.tilesArray[heroLocation.y][heroLocation.x].tileSprite.tint = 0xffffff;
+    // same thing with the key, we just don't want it to be too close to the hero
+    do {
+      var keyLocation = Phaser.Utils.Array.RemoveRandomElement(this.specialItemCandidates);
+    } while (this.isAdjacent(heroLocation, keyLocation));
+    this.tilesArray[keyLocation.y][keyLocation.x].tileSprite.setFrame(_KEY);
+    this.tilesArray[keyLocation.y][keyLocation.x].value = 10 + _KEY;
+    this.tilesArray[keyLocation.y][keyLocation.x].tileSprite.tint = 0xffffff;
+
+    // same thing with the locked door
+    do {
+      var lockedDoorLocation = Phaser.Utils.Array.RemoveRandomElement(this.specialItemCandidates);
+    } while (this.isAdjacent(heroLocation, lockedDoorLocation));
+    this.tilesArray[lockedDoorLocation.y][lockedDoorLocation.x].tileSprite.setFrame(_LOCKEDDOOR);
+    this.tilesArray[lockedDoorLocation.y][lockedDoorLocation.x].value = 10 + _LOCKEDDOOR;
+    this.tilesArray[lockedDoorLocation.y][lockedDoorLocation.x].tileSprite.tint = 0xffffff;
+
     // we are centering the group, both horizontally and vertically, in the canvas
-    var fieldWidth = gameOptions.tileSize * gameOptions.fieldSize;
+    let fieldWidth = gameOptions.tileSize * gameOptions.fieldSize;
     // placing the group in the middle of the canvas
 
 
@@ -281,8 +313,14 @@ class GameScene extends Phaser.Scene {
     this.rotateRight = this.add.sprite(3 * this.sys.game.config.width / 4, this.tileGroup.y + fieldWidth / 2 + gameOptions.tileSize, "rotate").setInteractive();
     this.rotateRight.on('pointerdown', (pointer) => {
       this.rotateBoard(90);
-    }, this)
+    }, this);
+    this.rotateRight.scaleX *= -1;
+
     this.tilePool = [];
+  }
+
+  isAdjacent(p1, p2) {
+    return (Math.abs(p1.x - p2.x) < 2) && (Math.abs(p1.y - p2.y) < 2);
   }
 
   printTilePool() {
@@ -307,7 +345,7 @@ class GameScene extends Phaser.Scene {
     let tileYPos = this.tileStartY + row * gameOptions.tileSize + gameOptions.tileSize / 2;
 
     // tile is added as an image
-    let theTile = this.add.sprite(tileXPos, tileYPos, "tile");
+    let theTile = this.add.sprite(tileXPos, tileYPos, "tiles", 0);
     // setting tile registration point to its center
     theTile.setOrigin(0.5);
 
