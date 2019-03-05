@@ -93,14 +93,14 @@ class GameScene extends Phaser.Scene {
   preload() {
     this.load.image('pin', '/wheel-of-fortune/assets/pin.png');
     // loading icons spritesheet
-    this.load.spritesheet("icons", "icons.png", {
+    this.load.spritesheet("icons", "/wheel-of-fortune/assets/icons.png", {
       frameWidth: 256,
       frameHeight: 256
     });
   }
 
   create() {
-    let startDegree = -90;
+    let startDegrees = -90;
     // making a graphic object without adding it to the game
     var graphics = this.make.graphics({
       x: 0,
@@ -112,15 +112,15 @@ class GameScene extends Phaser.Scene {
     this.wheelContainer = this.add.container(this.sys.game.config.width / 2, this.sys.game.config.height / 2);
     // array which will contain all icons
     let iconArray = [];
-     // looping through each slice
-    for(let i = 0; i < gameOptions.slices.length; i++) {
+    // looping through each slice
+    for (let i = 0; i < gameOptions.slices.length; i++) {
       let startColor = Phaser.Display.Color.ValueToColor(gameOptions.slices[i].startColor);
       let endColor = Phaser.Display.Color.ValueToColor(gameOptions.slices[i].endColor)
 
-      for(let j = gameOptions.slices[i].rings; j > 0; j--) {
+      for (let j = gameOptions.slices[i].rings; j > 0; j--) {
         // interpolate colors
         let ringColor = Phaser.Display.Color.Interpolate.ColorWithColor(startColor, endColor, gameOptions.slices[i].rings, j);
-         // converting the interpolated color to 0xRRGGBB format
+        // converting the interpolated color to 0xRRGGBB format
         let ringColorString = Phaser.Display.Color.RGBToString(Math.round(ringColor.r), Math.round(ringColor.g), Math.round(ringColor.b), 0, "0x");
         // setting fill style
         graphics.fillStyle(ringColorString, 1);
@@ -129,13 +129,45 @@ class GameScene extends Phaser.Scene {
         // filling the slice
         graphics.fillPath();
       }
-    }
-    // setting line style
-    graphics.lineStyle(gameOptions.strokeWidth, gameOptions.strokeColor, 1);
-    // drawing the biggest slice
-    graphics.slice(gameOptions.wheelRadius + gameOptions.strokeWidth, gameOptions.wheelRadius + gameOptions.strokeWidth, gameOptions.wheelRadius, Phaser.Math.DegToRad(startDegrees), Phaser.Math.DegToRad(startDegrees + gameOptions.slices[i].degrees), false);
-    graphics.strokPath();
+      // setting line style
+      graphics.lineStyle(gameOptions.strokeWidth, gameOptions.strokeColor, 1);
+      // drawing the biggest slice
+      graphics.slice(gameOptions.wheelRadius + gameOptions.strokeWidth, gameOptions.wheelRadius + gameOptions.strokeWidth, gameOptions.wheelRadius, Phaser.Math.DegToRad(startDegrees), Phaser.Math.DegToRad(startDegrees + gameOptions.slices[i].degrees), false);
+      graphics.strokePath();
 
+      // adding the icon
+      let icon = this.add.image(gameOptions.wheelRadius * 0.75 * Math.cos(Phaser.Math.DegToRad(startDegrees + gameOptions.slices[i].degrees / 2)), gameOptions.wheelRadius * 0.75 * Math.sin(Phaser.Math.DegToRad(startDegrees + gameOptions.slices[i].degrees / 2)), "icons", gameOptions.slices[i].iconFrame);
+
+      // scaling the icon according to game preferences
+      icon.scaleX = gameOptions.slices[i].iconScale;
+      icon.scaleY = gameOptions.slices[i].iconScale;
+
+      // rotating the icon
+      icon.angle = startDegrees + gameOptions.slices[i].degrees / 2 + 90;
+
+      // adding the icon to icon array
+      iconArray.push(icon);
+
+      startDegrees += gameOptions.slices[i].degrees;
+    }
+    // generate a texture called "wheel" from graphics data
+    graphics.generateTexture("wheel", (gameOptions.wheelRadius + gameOptions.strokeWidth) * 2, (gameOptions.wheelRadius + gameOptions.strokeWidth) * 2);
+
+    // creating a sprite with wheel image as if it was a preloaded image
+    let wheel = this.add.sprite(0, 0, "wheel");
+    // adding the wheel to the container
+    this.wheelContainer.add(wheel);
+    // adding all iconArray items to the container
+    this.wheelContainer.add(iconArray);
+    // adding the pin in the middle of the canvas
+    this.pin = this.add.sprite(game.config.width / 2, game.config.height / 2, "pin");
+
+    // adding the text field
+    this.prizeText = this.add.text(game.config.width / 2, game.config.height - 20, "Spin the wheel", {
+      font: "bold 32px Arial",
+      align: "center",
+      color: "white"
+    });
   }
 }
 
