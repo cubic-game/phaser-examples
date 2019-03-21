@@ -42,8 +42,8 @@ class GameScene extends Phaser.Scene {
   }
 
   create() {
-    this.infoGroup = this.add.group();
-    this.infoGroup.visible = false;
+    this.infoContainer = this.add.container();
+    this.infoContainer.visible = false;
 
     this.deck = Phaser.Utils.Array.NumberArray(0, 51);
     Phaser.Utils.Array.Shuffle(this.deck);
@@ -56,7 +56,7 @@ class GameScene extends Phaser.Scene {
       duration: 500,
       ease: 'Cubic.easeOut',
       onComplete: (t) => {
-        this.infoGroup.visible = true;
+        this.infoContainer.visible = true;
       }
     });
 
@@ -64,8 +64,8 @@ class GameScene extends Phaser.Scene {
     const infoUp = this.add.sprite(this.sys.game.config.width / 2, this.sys.game.config.height / 6, 'info');
     const infoDown = this.add.sprite(this.sys.game.config.width / 2, this.sys.game.config.height * 5 / 6, 'info');
     infoDown.setFrame(1);
-    this.infoGroup.add(infoUp);
-    this.infoGroup.add(infoDown);
+    this.infoContainer.add(infoUp);
+    this.infoContainer.add(infoDown);
 
     const swipeUp = this.add.sprite(this.sys.game.config.width / 2, this.sys.game.config.height / 2 - gameOptions.cardSheetHeight / 2 - 20, "swipe");
     this.tweens.add({
@@ -82,24 +82,24 @@ class GameScene extends Phaser.Scene {
       repeat: -1
     });
     swipeDown.setFrame(1);
-    this.infoGroup.add(swipeUp);
-    this.infoGroup.add(swipeDown);
+    this.infoContainer.add(swipeUp);
+    this.infoContainer.add(swipeDown);
 
     this.input.on('pointerdown', this.beginSwipe, this);
   }
 
   beginSwipe(e) {
-    this.infoGroup.visible = false;
+    this.infoContainer.visible = false;
     this.input.removeListener('pointerdown', this.beginSwipe, this);
     this.input.on('pointerup', this.endSwipe, this);
   }
 
   endSwipe(e) {
     this.input.removeListener('pointerup', this.endSwipe, this);
-    const swipeTime = e.timeUp - e.timeDown;
-    const swipeVector = ;
-    // const swipeMagnitude = Phaser.Geom.Point.
-    const swipeNormal = ;
+    const swipeTime = e.upTime - e.downTime;
+    const swipeVector = new Phaser.Geom.Point(e.upX - e.downX, e.upY - e.downY);
+    const swipeMagnitude = Phaser.Geom.Point.GetMagnitude(swipeVector);
+    const swipeNormal = new Phaser.Geom.Point(swipeVector.x / swipeMagnitude, swipeVector.y / swipeMagnitude);
 
     if (swipeMagnitude > 20 && swipeTime < 1000 && Math.abs(swipeNormal.y) > 0.8) {
       if (swipeNormal.y > 0.8) {
@@ -151,11 +151,33 @@ class GameScene extends Phaser.Scene {
       duration: 500,
       ease: 'Cubic.easeOut',
     })
-    cardToMove = (this.nextCardIndex + 1) % 2
+    cardToMove = (this.nextCardIndex + 1) % 2;
+    this.tweens.add({
+      targets: this.cardsInGame[cardToMove],
+      y: this.sys.game.config.height / 2,
+      duration: 500,
+      ease: 'Cubic.easeOut',
+      onComplete: (t) => {
+        cardToMove = this.nextCardIndex % 2;
+        this.cardsInGame[cardToMove].setFrame(this.getCardFrame(this.deck[this.nextCardIndex]));
+        this.nextCardIndex = (this.nextCardIndex + 1) % 52;
+        this.cardsInGame[cardToMove].x = gameOptions.cardSheetWidth * gameOptions.cardScale / -2;
+        this.input.on('pointerdown', this.beginSwipe, this);
+        this.infoContainer.visible = true;
+      }
+    });
   }
 
   fadeCards() {
-
+    this.tweens.add({
+      targets: this.cardsInGame,
+      alpha: 0,
+      duration: 500,
+    });
+    this.time.addEvent({
+      delay: 1000,
+      callback: () => this.scene.start('GameScene')
+    })
   }
 
   makeCard(cardIndex) {
