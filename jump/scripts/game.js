@@ -14,7 +14,9 @@ const captionTextFormat = (
   'Inactive: %4\n' +
   'Used:     %5\n' +
   'Free:     %6\n' +
-  'Full:     %7\n'
+  'Full:     %7\n' +
+  'ViewY:    %8\n' +
+  'HeroY:    %9\n'
 );
 
 window.onload = function () {
@@ -64,10 +66,12 @@ class GameScene extends Phaser.Scene {
 
     // collision detection
     this.physics.add.collider(this.platforms, this.hero);
+    this.cameraBottom = this.height;
   }
 
   createPlatforms() {
     this.platforms = this.physics.add.staticGroup({defaultKey: 'pixel', maxSize: 10});
+    this.platformIndex = 0;
 
     const basePlatform = this.spawPlatform(0, this.height - 16, this.width);
     basePlatform.setOrigin(0);
@@ -75,7 +79,8 @@ class GameScene extends Phaser.Scene {
 
     for (let i = 0; i < 9; i++) {
       const posX = Phaser.Math.RND.integerInRange(50, this.width - 60);
-      const posY = this.height - 100 - 100 * i;
+      const posY = this.height - 100 - 100 * this.platformIndex;
+      this.platformIndex++;
 
       const platform = this.spawPlatform(posX, posY, 60);
       platform.refreshBody();
@@ -100,7 +105,10 @@ class GameScene extends Phaser.Scene {
     this.hero.changeY = 0;
     this.hero.setGravityY(500);
     this.hero.setBounce(0.2);
-    this.hero.setCollideWorldBounds(true);
+    // this.hero.setCollideWorldBounds(true);
+    this.hero.body.checkCollision.right = false;
+    this.hero.body.checkCollision.up = false;
+    this.hero.body.checkCollision.left = false;
   }
 
   update() {
@@ -111,7 +119,9 @@ class GameScene extends Phaser.Scene {
       this.platforms.countActive(false),
       this.platforms.getTotalUsed(),
       this.platforms.getTotalFree(),
-      this.platforms.isFull()
+      this.platforms.isFull(),
+      this.cameraBottom,
+      this.hero.y,
     ]));
 
     if (this.cursors.left.isDown) {
@@ -126,23 +136,39 @@ class GameScene extends Phaser.Scene {
       this.hero.setVelocityY(-330);
     }
 
-    if (this.hero.prevY != this.hero.y) {
+    if (this.hero.prevY > this.hero.y) {
       this.hero.changeY = this.hero.y - this.hero.prevY;
       this.hero.prevY = this.hero.y;
       this.cameras.main.scrollY += this.hero.changeY;
       this.caption.y += this.hero.changeY;
-
-      this.printMainCamreaInfo();
+      this.cameraBottom = this.height + this.cameras.main.scrollY;
     }
 
     // check plaforms
+    this.platforms.children.iterate((platform) => {
+      if (platform.y > this.cameraBottom + 50) {
+        this.platforms.killAndHide(platform);
+        const posX = Phaser.Math.RND.integerInRange(50, this.width - 60);
+        const posY = this.height - 100 - 100 * this.platformIndex;
+        this.platformIndex++;
 
+        const newPlatform = this.spawPlatform(posX, posY, 60);
+        newPlatform.refreshBody();
+      }
+    })
+
+    // check whether the player is alive
+    if (this.hero.y > this.cameraBottom) {
+      this.scene.restart();
+    }
   }
 
   printMainCamreaInfo() {
     const camera = this.cameras.main;
     console.log('camera.x: ' + camera.x);
     console.log('camera.y: ' + camera.y);
+    console.log('camera.centerX: ' + camera.centerX);
+    console.log('camera.centerY: ' + camera.centerY);
     console.log('camera.scrollX: ' + camera.scrollX);
     console.log('camera.scrollY: ' + camera.scrollY);
     console.log('camera.width: ' + camera.width);
